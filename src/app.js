@@ -5,8 +5,10 @@ import { code } from 'telegraf/format';
 import { OggConverter } from './OggConverter.js';
 import { OpenAI } from './OpenAI.js';
 
-const userSession = {
-  messages: []
+const createUserSession = () => {
+  return {
+    messages: []
+  }
 };
 
 const bot = new Telegraf(config.get('TELEGRAM_TOKEN'));
@@ -15,19 +17,19 @@ const openai = new OpenAI(config.get('OPENAI_API_KEY'));
 bot.use(session());
 
 bot.command('new', async (ctx) => {
-  ctx.session = { messages: []};
+  ctx.session = createUserSession();
   await ctx.reply('New session created');
   await ctx.reply('Waiting for your text or voice request');
 });
 
 bot.command('start', async (ctx) => {
-  ctx.session = userSession;
+  ctx.session = createUserSession();
   await ctx.reply('👍');
   await ctx.reply('I am here for you now my dude, ask me something weirdo broooo');
 });
 
 bot.on(message('text'), async (ctx) => {
-  ctx.session ??= userSession;
+  ctx.session ??= createUserSession();
 
   try {
     const userID = String(ctx.message.from.id);
@@ -45,7 +47,7 @@ bot.on(message('text'), async (ctx) => {
 });
 
 bot.on(message('voice'), async (ctx) => {
-  ctx.session ??= userSession;
+  ctx.session ??= createUserSession();
 
   try {
     await ctx.reply(code('Your voice message accepted. Wait for the answer'));
