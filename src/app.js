@@ -11,7 +11,20 @@ const createUserSession = () => {
   }
 };
 
-const bot = new Telegraf(config.get('TELEGRAM_TOKEN'));
+const sendMessage = async (info, ctx) => {
+  if (info.length > 4096) {
+    for (let x = 0; x < info.length; x += 4096) {
+      await ctx.reply(info.slice(x, x + 4096));
+    }
+  } else {
+    await ctx.reply(info);
+  }
+}
+
+const bot = new Telegraf(config.get('TELEGRAM_TOKEN'), {
+  handlerTimeout: 200000
+});
+
 const openai = new OpenAI(config.get('OPENAI_API_KEY'));
 
 bot.use(session());
@@ -34,15 +47,15 @@ bot.on(message('text'), async (ctx) => {
   try {
     const userID = String(ctx.message.from.id);
     await ctx.reply(code('Your text message accepted. Wait for the answer'));
-    await ctx.reply(code(`Your request is: ${ctx.message.text}`));
 
-    ctx.session.messages.push({"role": "user", "content": ctx.message.text});
+    ctx.session.messages.push({ "role": "user", "content": ctx.message.text });
     const chatAnswer = await openai.chat(ctx.session.messages);
-    ctx.session.messages.push({"role": "assistant", "content": chatAnswer.content})
+    ctx.session.messages.push({ "role": "assistant", "content": chatAnswer.content });
 
-    ctx.reply(chatAnswer.content);
+    await sendMessage(chatAnswer.content, ctx);
   } catch (error) {
-    console.log('Voice error');
+    console.log('text error');
+    console.log(error);
   }
 });
 
@@ -59,9 +72,9 @@ bot.on(message('voice'), async (ctx) => {
     const transcriptedText = await openai.transcription(mp3Path);
     await ctx.reply(code(`Your request is: ${transcriptedText.text}`));
 
-    ctx.session.messages.push({"role": "user", "content": transcriptedText.text});
+    ctx.session.messages.push({ "role": "user", "content": transcriptedText.text });
     const chatAnswer = await openai.chat(ctx.session.messages);
-    ctx.session.messages.push({"role": "assistant", "content": chatAnswer.content})
+    ctx.session.messages.push({ "role": "assistant", "content": chatAnswer.content })
 
     ctx.reply(chatAnswer.content);
   } catch (error) {
